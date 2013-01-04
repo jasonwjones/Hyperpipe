@@ -1,3 +1,19 @@
+/**
+ * Copyright 2013 Jason W. Jones
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
+ */
+
 package com.jasonwjones.hyperpipe;
 
 import java.util.Collection;
@@ -20,32 +36,55 @@ import com.essbase.api.session.IEssbase;
 public class BufferingEssbaseRowFetchDelegate implements RowFetchDelegate {
 
 	private IEssCube cube;
-	private StringBuilder builder = new StringBuilder();
-	private int bufferSize = 200;
+	private IEssOlapServer olapSvr;
 
 	/**
-	 * TODO: disconnect from server in close() method
+	 * Contains the data that is constantly being buffered before being cleared
+	 * out and sent up.
+	 */
+	private StringBuilder builder = new StringBuilder();
+
+	/**
+	 * Per the Essbase Java API spec, the update strings are limited to 32K or
+	 * so, so we'll cut it at 30 and send the update
+	 */
+	private int bufferSize = 30000;
+
+	/**
+	 * This constructor takes all of the connection parameters at once and
+	 * builds the BufferingEssbaseRowDelegate.
 	 * 
-	 * @param apsServer
-	 * @param olapServer
-	 * @param username
-	 * @param password
-	 * @param app
-	 * @param db
-	 * @throws Exception
+	 * @param apsServer URL to the Essbase APS server
+	 * @param olapServer name of the Essbase OLAP server (frequently the same as
+	 *            the apsServer)
+	 * @param username username to connect to Essbase with
+	 * @param password password for the user
+	 * @param app Essbase application to use
+	 * @param db Essbase database (within application) to use
+	 * @throws Exception wraps an EssException, if anything happens
 	 */
 	public BufferingEssbaseRowFetchDelegate(String apsServer, String olapServer, String username,
 			String password, String app, String db) throws Exception {
+
 		IEssbase ess = IEssbase.Home.create(IEssbase.JAPI_VERSION);
-		IEssOlapServer olapSvr = ess.signOn(username, password, false, null, apsServer, olapServer);
+		olapSvr = ess.signOn(username, password, false, null, apsServer, olapServer);
 		cube = olapSvr.getApplication(app).getCube(db);
 	}
 
+	/**
+	 * Called for each row that comes in from SQL
+	 */
 	public void processRow(List<String> row) throws Exception {
 		String rowSpec = flattenColumn(row);
 		addToBuffer(rowSpec);
 	}
 
+	/**
+	 * Adds an update string to the current buffer and will automatically flush
+	 * if necessary (i.e., the buffer is greater than the max buffer size)
+	 * 
+	 * @param text text to add to the buffer
+	 */
 	private void addToBuffer(String text) {
 
 		if (builder.length() + text.length() > bufferSize) {
@@ -58,7 +97,6 @@ public class BufferingEssbaseRowFetchDelegate implements RowFetchDelegate {
 
 		builder.append(text);
 		builder.append("\n");
-		System.out.println("Added to buffer, length now: " + builder.length());
 	}
 
 	private void flushBuffer() throws Exception {
@@ -67,11 +105,19 @@ public class BufferingEssbaseRowFetchDelegate implements RowFetchDelegate {
 		builder.setLength(0);
 	}
 
+	/**
+	 * Given a SQL column that is represented as list of string values, wrap all
+	 * of them in quotes except the last value which is presumably the fact
+	 * value and therefore cannot and should not have quotes around it.
+	 * 
+	 * @param column all of the columns in a SQL ro
+	 * @return a text representation of the column suitable for an Essbase
+	 *         update string
+	 */
 	private String flattenColumn(List<String> column) {
 		String members = collectionToDelimitedString(column.subList(0, column.size() - 1), " ");
 		Object fact = column.get(column.size() - 1);
 		return members + " " + fact;
-		// return collectionToDelimitedString(column, " ");
 	}
 
 	/**
@@ -112,15 +158,23 @@ public class BufferingEssbaseRowFetchDelegate implements RowFetchDelegate {
 		return sb.toString();
 	}
 
+	/**
+	 * Called before any rows are processed so perform any necessary steps
+	 * before streaming in updates.
+	 */
+	public void startProcessingRows() throws Exception {
+		System.out.println("Beginning update...");
+		cube.beginUpdate(true, false);
+	}
+
+	/**
+	 * Called when processing has completed, so perform cleanup tasks if needed.
+	 */
 	public void doneProcessingRows() throws Exception {
 		System.out.println("End update -- force flush");
 		flushBuffer();
 		cube.endUpdate();
-	}
-
-	public void startProcessingRows() throws Exception {
-		System.out.println("Beginning update...");
-		cube.beginUpdate(true, false);
+		olapSvr.disconnect();
 	}
 
 }
