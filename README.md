@@ -14,6 +14,19 @@ Hyperpipe is licensed under the Apache software license — a very business frie
 Hyperpipe comes with absolutely no warranty and I will not be held responsible for damaging your data, server, software, or anything related to these processes. Please use it at your own risk and always test in a development environment. Please let me know of any issues you run into so they can be addressed as time permits.
 
 
+## Download
+
+You can download the latest published version of Hyperpipe from [here](http://www.jasonwjones.com/downloads/hyperpipe/).
+
+
+## Quickstart
+
+There isn't really a quick start to this. But here's the steps:
+
+1. Download the above runnable jar file
+2. Get the appropriate Java JDBC/jar file for your SQL RDBMS
+3. Craft a command line as described below to pump SQL data into an Essbase cube
+
 ## Usage
 
 Hyperpipe is a self-contained runnable jar file. At present it is linked against an Essbase Java library from version 9.3.1 of Essbase. It has been linked against an Essbase Java library from 11.1.1.3 and worked too but it has not been extensively tested against all versions and permutations. If it doesn't work for you as-is you may have to link against a different library. 
