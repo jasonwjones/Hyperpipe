@@ -36,7 +36,6 @@ public class Hyperpipe {
 
 		try {
 			commander.parse(args);
-			System.out.println("Query will be: " + command.sqlQuery);
 		} catch (Exception e) {
 			commander.usage();
 			System.exit(1);
@@ -68,6 +67,7 @@ public class Hyperpipe {
 		Properties connection = new Properties();
 		connection.put("user", command.sqlUser);
 		connection.put("url", command.sqlUrl);
+		connection.put("password", command.sqlPassword);
 
 		try {
 			fetcher.fetch(command.sqlQuery, connection, rowFetchDelegate);

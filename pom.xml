@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.jasonwjones.hyperpipe</groupId>
 	<artifactId>hyperpipe</artifactId>
-	<version>1.0.0</version>
+	<version>1.0.1</version>
 	<name>Hyperpipe</name>
 	<url>http://www.jasonwjones.com/projects/hyperpipe</url>
 	<description>Hyperpipe is a simple command-line Java program that can be used to fetch data from a SQL database using given credentials, driver, and query and then pipe the data directly into a Hyperion Essbase cube without using a load rule.	</description>
